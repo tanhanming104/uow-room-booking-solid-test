@@ -8,6 +8,10 @@ h1 {
   color: navy;
 }
 
+select {
+  padding: 3px;
+}
+
 button {
   padding: 5px 10px;
   cursor: pointer;

@@ -7,6 +7,10 @@ var users = [
   { email: "student@uow", password: "1234", role: "student" }
 ];
 
+// opening hours in minutes (9am = 540, 8pm = 1200)
+var OPEN_TIME = 540;
+var CLOSE_TIME = 1200;
+
 var rooms = [];
 var bookings = [];
 var currentUser = null;
@@ -14,16 +18,24 @@ var editIndex = -1;        // -1 means not editing a room
 var modifyBookingId = -1;  // -1 means not modifying a booking
 
 // load data from localstorage if got
-if (localStorage.getItem("rooms") != null) {
-  rooms = JSON.parse(localStorage.getItem("rooms"));
+if (localStorage.getItem("uowRooms") != null) {
+  rooms = JSON.parse(localStorage.getItem("uowRooms"));
+} else {
+  // first time open the website, make the 3 default rooms
+  rooms = [
+    { id: 1, name: "Big Room", capacity: 10, price: 10, promo: "UOW@123", discount: 25, launched: true },
+    { id: 2, name: "TV Room", capacity: 5, price: 7, promo: "UOW@123", discount: 25, launched: true },
+    { id: 3, name: "Small Room", capacity: 3, price: 4, promo: "UOW@123", discount: 25, launched: true }
+  ];
 }
-if (localStorage.getItem("bookings") != null) {
-  bookings = JSON.parse(localStorage.getItem("bookings"));
+if (localStorage.getItem("uowBookings") != null) {
+  bookings = JSON.parse(localStorage.getItem("uowBookings"));
 }
+saveData();
 
 function saveData() {
-  localStorage.setItem("rooms", JSON.stringify(rooms));
-  localStorage.setItem("bookings", JSON.stringify(bookings));
+  localStorage.setItem("uowRooms", JSON.stringify(rooms));
+  localStorage.setItem("uowBookings", JSON.stringify(bookings));
 }
 
 // find a room using its id
@@ -34,6 +46,59 @@ function findRoom(id) {
     }
   }
   return null;
+}
+
+// change minutes to time text, eg 570 -> "9:30 AM"
+function toTime(mins) {
+  var h = Math.floor(mins / 60);
+  var m = mins % 60;
+  var ampm = "AM";
+  if (h >= 12) {
+    ampm = "PM";
+  }
+  if (h > 12) {
+    h = h - 12;
+  }
+  if (m < 10) {
+    m = "0" + m;
+  }
+  return h + ":" + m + " " + ampm;
+}
+
+// get today date like "2026-10-08"
+function todayString() {
+  var d = new Date();
+  var month = d.getMonth() + 1;
+  var day = d.getDate();
+  if (month < 10) {
+    month = "0" + month;
+  }
+  if (day < 10) {
+    day = "0" + day;
+  }
+  return d.getFullYear() + "-" + month + "-" + day;
+}
+
+// check if room is free at that date and time
+// ignoreId is for when student modify their own booking
+function isRoomFree(roomId, date, start, end, ignoreId) {
+  for (var b = 0; b < bookings.length; b++) {
+    if (bookings[b].id == ignoreId) {
+      continue;
+    }
+    if (bookings[b].date != date) {
+      continue;
+    }
+    for (var r = 0; r < bookings[b].rooms.length; r++) {
+      if (bookings[b].rooms[r].id == roomId) {
+        // times overlap
+        if (start < bookings[b].end && bookings[b].start < end) {
+          return false;
+        }
+      }
+    }
+  }
+  return true;
 }
 
 
@@ -65,8 +130,10 @@ function login() {
   if (currentUser.role == "teacher") {
     document.getElementById("teacherPage").style.display = "block";
     showRooms();
+    showAllBookings();
   } else {
     document.getElementById("studentPage").style.display = "block";
+    setupBookingForm();
     showAvailableRooms();
     showMyBookings();
   }
@@ -78,6 +145,7 @@ function logout() {
   modifyBookingId = -1;
   document.getElementById("saveRoomBtn").innerHTML = "Create Room";
   document.getElementById("bookBtn").innerHTML = "Book Selected Rooms";
+  document.getElementById("stopModifyBtn").style.display = "none";
   document.getElementById("roomMsg").innerHTML = "";
   document.getElementById("bookMsg").innerHTML = "";
   document.getElementById("teacherPage").style.display = "none";
@@ -98,23 +166,16 @@ function saveRoom() {
   var name = document.getElementById("roomName").value;
   var capacity = document.getElementById("capacity").value;
   var price = document.getElementById("price").value;
-  var date = document.getElementById("date").value;
-  var start = document.getElementById("startTime").value;
-  var end = document.getElementById("endTime").value;
   var promo = document.getElementById("promoCode").value;
   var discount = document.getElementById("discount").value;
 
   // check the inputs
-  if (name == "" || capacity == "" || price == "" || date == "" || start == "" || end == "") {
-    document.getElementById("roomMsg").innerHTML = "Please fill in all the fields!";
+  if (name == "" || capacity == "" || price == "") {
+    document.getElementById("roomMsg").innerHTML = "Please fill in room name, capacity and price!";
     return;
   }
   if (Number(capacity) < 1 || Number(price) < 0) {
     document.getElementById("roomMsg").innerHTML = "Capacity or price is wrong!";
-    return;
-  }
-  if (start >= end) {
-    document.getElementById("roomMsg").innerHTML = "End time must be after start time!";
     return;
   }
   if (promo != "" && (discount == "" || Number(discount) < 1 || Number(discount) > 100)) {
@@ -134,13 +195,9 @@ function saveRoom() {
       name: name,
       capacity: Number(capacity),
       price: Number(price),
-      date: date,
-      start: start,
-      end: end,
       promo: promo.toUpperCase(),
       discount: Number(discount),
-      launched: false,
-      bookedBy: ""
+      launched: false
     };
     rooms.push(room);
     message = "Room created! Click Launch so students can book it.";
@@ -149,9 +206,6 @@ function saveRoom() {
     rooms[editIndex].name = name;
     rooms[editIndex].capacity = Number(capacity);
     rooms[editIndex].price = Number(price);
-    rooms[editIndex].date = date;
-    rooms[editIndex].start = start;
-    rooms[editIndex].end = end;
     rooms[editIndex].promo = promo.toUpperCase();
     rooms[editIndex].discount = Number(discount);
     message = "Room updated!";
@@ -167,9 +221,6 @@ function clearForm() {
   document.getElementById("roomName").value = "";
   document.getElementById("capacity").value = "";
   document.getElementById("price").value = "";
-  document.getElementById("date").value = "";
-  document.getElementById("startTime").value = "";
-  document.getElementById("endTime").value = "";
   document.getElementById("promoCode").value = "";
   document.getElementById("discount").value = "";
   document.getElementById("roomMsg").innerHTML = "";
@@ -179,19 +230,16 @@ function clearForm() {
 
 // show all rooms in the table for teacher
 function showRooms() {
-  var html = "<tr><th>Room</th><th>Date</th><th>Time</th><th>Capacity</th><th>Price</th><th>Promo</th><th>Status</th><th>Action</th></tr>";
+  var html = "<tr><th>Room</th><th>Capacity</th><th>Price per hour</th><th>Promo</th><th>Status</th><th>Action</th></tr>";
 
   if (rooms.length == 0) {
-    html = html + "<tr><td colspan='8'>No rooms yet</td></tr>";
+    html = html + "<tr><td colspan='6'>No rooms yet</td></tr>";
   }
 
   for (var i = 0; i < rooms.length; i++) {
     var status = "Not Launched";
     if (rooms[i].launched == true) {
       status = "Launched";
-    }
-    if (rooms[i].bookedBy != "") {
-      status = status + " (Booked)";
     }
 
     var promoText = "-";
@@ -201,9 +249,7 @@ function showRooms() {
 
     html = html + "<tr>";
     html = html + "<td>" + rooms[i].name + "</td>";
-    html = html + "<td>" + rooms[i].date + "</td>";
-    html = html + "<td>" + rooms[i].start + " - " + rooms[i].end + "</td>";
-    html = html + "<td>" + rooms[i].capacity + "</td>";
+    html = html + "<td>" + rooms[i].capacity + " students</td>";
     html = html + "<td>$" + rooms[i].price + "</td>";
     html = html + "<td>" + promoText + "</td>";
     html = html + "<td>" + status + "</td>";
@@ -218,6 +264,33 @@ function showRooms() {
   }
 
   document.getElementById("roomTable").innerHTML = html;
+}
+
+// teacher can see every booking
+function showAllBookings() {
+  var html = "<tr><th>Student</th><th>Date</th><th>Time</th><th>Rooms</th><th>Total</th></tr>";
+
+  if (bookings.length == 0) {
+    html = html + "<tr><td colspan='5'>No bookings yet</td></tr>";
+  }
+
+  for (var i = 0; i < bookings.length; i++) {
+    var roomText = "";
+    var total = 0;
+    for (var r = 0; r < bookings[i].rooms.length; r++) {
+      roomText = roomText + bookings[i].rooms[r].name + "<br>";
+      total = total + bookings[i].rooms[r].price;
+    }
+    html = html + "<tr>";
+    html = html + "<td>" + bookings[i].student + "</td>";
+    html = html + "<td>" + bookings[i].date + "</td>";
+    html = html + "<td>" + toTime(bookings[i].start) + " - " + toTime(bookings[i].end) + "</td>";
+    html = html + "<td>" + roomText + "</td>";
+    html = html + "<td>$" + total.toFixed(2) + "</td>";
+    html = html + "</tr>";
+  }
+
+  document.getElementById("allBookingsTable").innerHTML = html;
 }
 
 // launch = students can see the room now
@@ -241,9 +314,6 @@ function editRoom(i) {
   document.getElementById("roomName").value = rooms[i].name;
   document.getElementById("capacity").value = rooms[i].capacity;
   document.getElementById("price").value = rooms[i].price;
-  document.getElementById("date").value = rooms[i].date;
-  document.getElementById("startTime").value = rooms[i].start;
-  document.getElementById("endTime").value = rooms[i].end;
   document.getElementById("promoCode").value = rooms[i].promo;
   if (rooms[i].promo != "") {
     document.getElementById("discount").value = rooms[i].discount;
@@ -261,16 +331,27 @@ function deleteRoom(i) {
     return;
   }
 
+  var roomId = rooms[i].id;
+
+  // check if any booking got this room
+  var hasBooking = false;
+  for (var b = 0; b < bookings.length; b++) {
+    for (var r = 0; r < bookings[b].rooms.length; r++) {
+      if (bookings[b].rooms[r].id == roomId) {
+        hasBooking = true;
+      }
+    }
+  }
+
   var msg = "Are you sure you want to delete " + rooms[i].name + "?";
-  if (rooms[i].bookedBy != "") {
-    msg = "This room is booked by a student! Delete anyway?";
+  if (hasBooking == true) {
+    msg = "This room has bookings! Delete anyway?";
   }
   if (confirm(msg) == false) {
     return;
   }
 
   // remove the room from any booking that has it
-  var roomId = rooms[i].id;
   for (var b = bookings.length - 1; b >= 0; b--) {
     for (var r = bookings[b].rooms.length - 1; r >= 0; r--) {
       if (bookings[b].rooms[r].id == roomId) {
@@ -287,15 +368,44 @@ function deleteRoom(i) {
   clearForm();
   saveData();
   showRooms();
+  showAllBookings();
   document.getElementById("roomMsg").innerHTML = "Room deleted!";
 }
 
 
 // ================= STUDENT STUFF =================
 
-// show launched rooms that nobody booked yet
+// put the start times (9am to 7:30pm) into the dropdown
+function setupBookingForm() {
+  var html = "";
+  for (var m = OPEN_TIME; m < CLOSE_TIME; m = m + 30) {
+    html = html + "<option value='" + m + "'>" + toTime(m) + "</option>";
+  }
+  document.getElementById("startTime").innerHTML = html;
+  document.getElementById("bookDate").min = todayString();
+  if (document.getElementById("bookDate").value == "") {
+    document.getElementById("bookDate").value = todayString();
+  }
+}
+
+// show launched rooms and if they are free for the chosen time
 function showAvailableRooms() {
-  // if modifying, get the rooms already in that booking
+  var date = document.getElementById("bookDate").value;
+  var start = Number(document.getElementById("startTime").value);
+  var duration = Number(document.getElementById("duration").value);
+  var end = start + duration;
+  var table = document.getElementById("availableTable");
+
+  if (date == "") {
+    table.innerHTML = "<tr><td>Please choose a date first</td></tr>";
+    return;
+  }
+  if (end > CLOSE_TIME) {
+    table.innerHTML = "<tr><td>Rooms close at 8:00 PM. Please choose an earlier time or shorter duration.</td></tr>";
+    return;
+  }
+
+  // if modifying, get the rooms already in that booking so we tick them
   var myRoomIds = [];
   if (modifyBookingId != -1) {
     for (var b = 0; b < bookings.length; b++) {
@@ -307,46 +417,69 @@ function showAvailableRooms() {
     }
   }
 
-  var html = "<tr><th>Select</th><th>Room</th><th>Date</th><th>Time</th><th>Capacity</th><th>Price</th><th>Promo</th></tr>";
+  var html = "<tr><th>Select</th><th>Room</th><th>Capacity</th><th>Price per hour</th><th>Cost for " + (duration / 60) + " hr</th></tr>";
   var count = 0;
 
   for (var i = 0; i < rooms.length; i++) {
-    var isMine = myRoomIds.indexOf(rooms[i].id) != -1;
+    if (rooms[i].launched == false) {
+      continue;
+    }
 
-    if ((rooms[i].launched == true && rooms[i].bookedBy == "") || isMine) {
+    var cost = rooms[i].price * duration / 60;
+    var free = isRoomFree(rooms[i].id, date, start, end, modifyBookingId);
+
+    html = html + "<tr>";
+    if (free == true) {
       var checked = "";
-      if (isMine) {
+      if (myRoomIds.indexOf(rooms[i].id) != -1) {
         checked = "checked";
       }
-      var hasPromo = "No";
-      if (rooms[i].promo != "") {
-        hasPromo = "Yes";
-      }
-
-      html = html + "<tr>";
       html = html + "<td><input type='checkbox' class='roomCheck' value='" + rooms[i].id + "' " + checked + "></td>";
-      html = html + "<td>" + rooms[i].name + "</td>";
-      html = html + "<td>" + rooms[i].date + "</td>";
-      html = html + "<td>" + rooms[i].start + " - " + rooms[i].end + "</td>";
-      html = html + "<td>" + rooms[i].capacity + "</td>";
-      html = html + "<td>$" + rooms[i].price + "</td>";
-      html = html + "<td>" + hasPromo + "</td>";
-      html = html + "</tr>";
-      count++;
+    } else {
+      html = html + "<td>Booked</td>";
     }
+    html = html + "<td>" + rooms[i].name + "</td>";
+    html = html + "<td>" + rooms[i].capacity + " students</td>";
+    html = html + "<td>$" + rooms[i].price + "</td>";
+    html = html + "<td>$" + cost.toFixed(2) + "</td>";
+    html = html + "</tr>";
+    count++;
   }
 
   if (count == 0) {
-    html = html + "<tr><td colspan='7'>No rooms available</td></tr>";
+    html = html + "<tr><td colspan='5'>No rooms available</td></tr>";
   }
 
-  document.getElementById("availableTable").innerHTML = html;
+  table.innerHTML = html;
 }
 
 // book the ticked rooms (or update booking if modifying)
 function bookRooms() {
   if (currentUser == null || currentUser.role != "student") {
     alert("Only student can do this!");
+    return;
+  }
+
+  var date = document.getElementById("bookDate").value;
+  var start = Number(document.getElementById("startTime").value);
+  var duration = Number(document.getElementById("duration").value);
+  var end = start + duration;
+
+  // check date and time
+  if (date == "") {
+    document.getElementById("bookMsg").innerHTML = "Please choose a date!";
+    return;
+  }
+  if (date < todayString()) {
+    document.getElementById("bookMsg").innerHTML = "Cannot book a date that already passed!";
+    return;
+  }
+  if (duration < 30 || duration > 120) {
+    document.getElementById("bookMsg").innerHTML = "Booking must be between 30 mins and 2 hours!";
+    return;
+  }
+  if (start < OPEN_TIME || end > CLOSE_TIME) {
+    document.getElementById("bookMsg").innerHTML = "Rooms are only open from 9:00 AM to 8:00 PM!";
     return;
   }
 
@@ -370,7 +503,14 @@ function bookRooms() {
 
   for (var i = 0; i < selected.length; i++) {
     var room = findRoom(selected[i]);
-    var price = room.price;
+
+    // double check nobody took the room
+    if (isRoomFree(room.id, date, start, end, modifyBookingId) == false) {
+      document.getElementById("bookMsg").innerHTML = room.name + " is already booked at that time!";
+      return;
+    }
+
+    var price = room.price * duration / 60;
 
     // apply promo if the code matches this room
     if (promo != "" && promo == room.promo) {
@@ -378,14 +518,7 @@ function bookRooms() {
       promoUsed = true;
     }
 
-    bookedRooms.push({
-      id: room.id,
-      name: room.name,
-      date: room.date,
-      start: room.start,
-      end: room.end,
-      price: price
-    });
+    bookedRooms.push({ id: room.id, name: room.name, price: price });
     total = total + price;
   }
 
@@ -399,34 +532,28 @@ function bookRooms() {
     var booking = {
       id: Date.now(),
       student: currentUser.email,
+      date: date,
+      start: start,
+      end: end,
       rooms: bookedRooms,
       promo: promo
     };
     bookings.push(booking);
-    for (var i = 0; i < selected.length; i++) {
-      findRoom(selected[i]).bookedBy = currentUser.email;
-    }
     document.getElementById("bookMsg").innerHTML = "Booking successful! Total: $" + total.toFixed(2);
   } else {
     // modify old booking
     for (var b = 0; b < bookings.length; b++) {
       if (bookings[b].id == modifyBookingId) {
-        // free the old rooms first
-        for (var r = 0; r < bookings[b].rooms.length; r++) {
-          var oldRoom = findRoom(bookings[b].rooms[r].id);
-          if (oldRoom != null) {
-            oldRoom.bookedBy = "";
-          }
-        }
+        bookings[b].date = date;
+        bookings[b].start = start;
+        bookings[b].end = end;
         bookings[b].rooms = bookedRooms;
         bookings[b].promo = promo;
       }
     }
-    for (var i = 0; i < selected.length; i++) {
-      findRoom(selected[i]).bookedBy = currentUser.email;
-    }
     modifyBookingId = -1;
     document.getElementById("bookBtn").innerHTML = "Book Selected Rooms";
+    document.getElementById("stopModifyBtn").style.display = "none";
     document.getElementById("bookMsg").innerHTML = "Booking updated! New total: $" + total.toFixed(2);
   }
 
@@ -438,7 +565,7 @@ function bookRooms() {
 
 // show the bookings of the student that logged in
 function showMyBookings() {
-  var html = "<tr><th>Booking ID</th><th>Rooms</th><th>Promo</th><th>Total</th><th>Action</th></tr>";
+  var html = "<tr><th>Booking ID</th><th>Date</th><th>Time</th><th>Rooms</th><th>Promo</th><th>Total</th><th>Action</th></tr>";
   var count = 0;
 
   for (var i = 0; i < bookings.length; i++) {
@@ -446,9 +573,8 @@ function showMyBookings() {
       var roomText = "";
       var total = 0;
       for (var r = 0; r < bookings[i].rooms.length; r++) {
-        var rm = bookings[i].rooms[r];
-        roomText = roomText + rm.name + " (" + rm.date + ", " + rm.start + " - " + rm.end + ")<br>";
-        total = total + rm.price;
+        roomText = roomText + bookings[i].rooms[r].name + " ($" + bookings[i].rooms[r].price.toFixed(2) + ")<br>";
+        total = total + bookings[i].rooms[r].price;
       }
 
       var promoText = "-";
@@ -458,6 +584,8 @@ function showMyBookings() {
 
       html = html + "<tr>";
       html = html + "<td>" + bookings[i].id + "</td>";
+      html = html + "<td>" + bookings[i].date + "</td>";
+      html = html + "<td>" + toTime(bookings[i].start) + " - " + toTime(bookings[i].end) + "</td>";
       html = html + "<td>" + roomText + "</td>";
       html = html + "<td>" + promoText + "</td>";
       html = html + "<td>$" + total.toFixed(2) + "</td>";
@@ -469,26 +597,39 @@ function showMyBookings() {
   }
 
   if (count == 0) {
-    html = html + "<tr><td colspan='5'>No bookings yet</td></tr>";
+    html = html + "<tr><td colspan='7'>No bookings yet</td></tr>";
   }
 
   document.getElementById("bookingTable").innerHTML = html;
 }
 
-// load the booking so student can change the rooms
+// load the booking so student can change date, time or rooms
 function modifyBooking(id) {
   if (currentUser == null || currentUser.role != "student") {
     alert("Only student can do this!");
     return;
   }
-  modifyBookingId = id;
   for (var i = 0; i < bookings.length; i++) {
     if (bookings[i].id == id) {
+      modifyBookingId = id;
+      document.getElementById("bookDate").value = bookings[i].date;
+      document.getElementById("startTime").value = bookings[i].start;
+      document.getElementById("duration").value = bookings[i].end - bookings[i].start;
       document.getElementById("studentPromo").value = bookings[i].promo;
     }
   }
   document.getElementById("bookBtn").innerHTML = "Update Booking";
-  document.getElementById("bookMsg").innerHTML = "Change the rooms you want then click Update Booking";
+  document.getElementById("stopModifyBtn").style.display = "inline";
+  document.getElementById("bookMsg").innerHTML = "Change the date, time or rooms then click Update Booking";
+  showAvailableRooms();
+}
+
+function stopModify() {
+  modifyBookingId = -1;
+  document.getElementById("bookBtn").innerHTML = "Book Selected Rooms";
+  document.getElementById("stopModifyBtn").style.display = "none";
+  document.getElementById("studentPromo").value = "";
+  document.getElementById("bookMsg").innerHTML = "";
   showAvailableRooms();
 }
 
@@ -503,21 +644,13 @@ function cancelBooking(id) {
 
   for (var i = 0; i < bookings.length; i++) {
     if (bookings[i].id == id) {
-      // make the rooms available again
-      for (var r = 0; r < bookings[i].rooms.length; r++) {
-        var room = findRoom(bookings[i].rooms[r].id);
-        if (room != null) {
-          room.bookedBy = "";
-        }
-      }
       bookings.splice(i, 1);
       break;
     }
   }
 
   if (modifyBookingId == id) {
-    modifyBookingId = -1;
-    document.getElementById("bookBtn").innerHTML = "Book Selected Rooms";
+    stopModify();
   }
 
   saveData();
