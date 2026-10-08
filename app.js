@@ -108,7 +108,7 @@ function isRoomFree(roomId, date, start, end, ignoreId) {
 // ================= LOGIN =================
 
 function login() {
-  var email = document.getElementById("email").value;
+  var email = document.getElementById("email").value.trim().toLowerCase();
   var password = document.getElementById("password").value;
   var found = false;
 
