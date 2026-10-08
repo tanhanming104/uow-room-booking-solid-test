@@ -286,32 +286,62 @@ function showRooms() {
 }
 
 // teacher can see every booking
+// teacher can see every booking
 function showAllBookings() {
-  var html = "<tr><th>Student</th><th>Date</th><th>Time</th><th>Rooms</th><th>Total</th></tr>";
+var html = "<tr><th>Student</th><th>Date</th><th>Time</th><th>Rooms</th><th>Total</th><th>Action</th></tr>";
 
-  if (bookings.length == 0) {
-    html = html + "<tr><td colspan='5'>No bookings yet</td></tr>";
-  }
-
-  for (var i = 0; i < bookings.length; i++) {
-    var roomText = "";
-    var total = 0;
-    for (var r = 0; r < bookings[i].rooms.length; r++) {
-      roomText = roomText + bookings[i].rooms[r].name + "<br>";
-      total = total + bookings[i].rooms[r].price;
-    }
-    html = html + "<tr>";
-    html = html + "<td>" + bookings[i].student + "</td>";
-    html = html + "<td>" + bookings[i].date + "</td>";
-    html = html + "<td>" + toTime(bookings[i].start) + " - " + toTime(bookings[i].end) + "</td>";
-    html = html + "<td>" + roomText + "</td>";
-    html = html + "<td>$" + total.toFixed(2) + "</td>";
-    html = html + "</tr>";
-  }
-
-  document.getElementById("allBookingsTable").innerHTML = html;
+if (bookings.length == 0) {
+html = html + "<tr><td colspan='6'>No bookings yet</td></tr>";
 }
 
+for (var i = 0; i < bookings.length; i++) {
+var roomText = "";
+var total = 0;
+for (var r = 0; r < bookings[i].rooms.length; r++) {
+roomText = roomText + bookings[i].rooms[r].name + "<br>";
+total = total + bookings[i].rooms[r].price;
+}
+html = html + "<tr>";
+html = html + "<td>" + bookings[i].student + "</td>";
+html = html + "<td>" + bookings[i].date + "</td>";
+html = html + "<td>" + toTime(bookings[i].start) + " - " + toTime(bookings[i].end) + "</td>";
+html = html + "<td>" + roomText + "</td>";
+html = html + "<td>$" + total.toFixed(2) + "</td>";
+html = html + "<td><button onclick='teacherCancelBooking(" + bookings[i].id + ")'>Cancel</button></td>";
+html = html + "</tr>";
+}
+
+document.getElementById("allBookingsTable").innerHTML = html;
+}
+// teacher cancel any student's booking
+function teacherCancelBooking(id) {
+if (currentUser == null || currentUser.role != "teacher") {
+alert("Only teacher can do this!");
+return;
+}
+
+var index = -1;
+for (var i = 0; i < bookings.length; i++) {
+if (bookings[i].id == id) {
+index = i;
+}
+}
+if (index == -1) {
+return;
+}
+
+var b = bookings[index];
+var msg = "Cancel " + b.student + "'s booking on " + b.date + " (" +
+toTime(b.start) + " - " + toTime(b.end) + ")?";
+if (confirm(msg) == false) {
+return;
+}
+
+bookings.splice(index, 1);
+saveData();
+showAllBookings();
+document.getElementById("roomMsg").innerHTML = "Booking cancelled!";
+}
 // launch = students can see the room now
 function launchRoom(i) {
   if (currentUser == null || currentUser.role != "teacher") {
