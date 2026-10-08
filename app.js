@@ -286,7 +286,6 @@ function showRooms() {
 }
 
 // teacher can see every booking
-// teacher can see every booking
 function showAllBookings() {
 var html = "<tr><th>Student</th><th>Date</th><th>Time</th><th>Rooms</th><th>Total</th><th>Action</th></tr>";
 
