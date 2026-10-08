@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>UOW Room Booking</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<h1>UOW Room Booking System</h1>
+
+<!-- LOGIN PAGE -->
+<div id="loginPage">
+  <h2>Login</h2>
+  Email: <input type="text" id="email"><br><br>
+  Password: <input type="password" id="password"><br><br>
+  <button onclick="login()">Login</button>
+  <p id="loginMsg"></p>
+</div>
+
+<!-- TEACHER PAGE -->
+<div id="teacherPage">
+  <p>Logged in as Teacher <button onclick="logout()">Logout</button></p>
+
+  <h2>Create Room</h2>
+  Room Name: <input type="text" id="roomName"><br><br>
+  Capacity: <input type="number" id="capacity"><br><br>
+  Price ($): <input type="number" id="price"><br><br>
+  Date: <input type="date" id="date"><br><br>
+  Start Time: <input type="time" id="startTime">
+  End Time: <input type="time" id="endTime"><br><br>
+  Promo Code: <input type="text" id="promoCode">
+  Discount (%): <input type="number" id="discount"><br><br>
+  <button id="saveRoomBtn" onclick="saveRoom()">Create Room</button>
+  <button onclick="clearForm()">Clear</button>
+  <p id="roomMsg"></p>
+
+  <h2>All Rooms</h2>
+  <table border="1" id="roomTable"></table>
+</div>
+
+<!-- STUDENT PAGE -->
+<div id="studentPage">
+  <p>Logged in as Student <button onclick="logout()">Logout</button></p>
+
+  <h2>Available Rooms</h2>
+  <table border="1" id="availableTable"></table>
+  <br>
+  Promo Code: <input type="text" id="studentPromo"><br><br>
+  <button id="bookBtn" onclick="bookRooms()">Book Selected Rooms</button>
+  <p id="bookMsg"></p>
+
+  <h2>My Bookings</h2>
+  <table border="1" id="bookingTable"></table>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

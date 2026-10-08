@@ -1,0 +1,32 @@
+body {
+  font-family: Arial;
+  margin: 20px;
+  background-color: #f2f2f2;
+}
+
+h1 {
+  color: navy;
+}
+
+button {
+  padding: 5px 10px;
+  cursor: pointer;
+}
+
+table {
+  border-collapse: collapse;
+  background-color: white;
+}
+
+th, td {
+  padding: 5px 10px;
+}
+
+th {
+  background-color: lightblue;
+}
+
+/* hide these until login */
+#teacherPage, #studentPage {
+  display: none;
+}
