@@ -1,6 +1,17 @@
 // UOW Room Booking System
 // room booking project
 
+// show password function
+function togglePassword() {
+  var passwordInput = document.getElementById("password");
+
+  if (passwordInput.type === "password") {
+    passwordInput.type = "text";
+  } else {
+    passwordInput.type = "password";
+  }
+}
+
 // users (hardcoded for now)
 var users = [
   { email: "teacher@uow", password: "1234", role: "teacher" },
