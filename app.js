@@ -103,7 +103,23 @@ function isRoomFree(roomId, date, start, end, ignoreId) {
   }
   return true;
 }
-
+// check if this student already has a booking at this date and time
+// ignoreId is for when student modify their own booking
+function isStudentFree(email, date, start, end, ignoreId) {
+for (var b = 0; b < bookings.length; b++) {
+if (bookings[b].id == ignoreId) {
+continue;
+}
+if (bookings[b].student != email || bookings[b].date != date) {
+continue;
+}
+// times overlap
+if (start < bookings[b].end && bookings[b].start < end) {
+return false;
+}
+}
+return true;
+}
 
 // ================= LOGIN =================
 
@@ -498,7 +514,22 @@ function bookRooms() {
     document.getElementById("bookMsg").innerHTML = "Please select at least 1 room!";
     return;
   }
+if (selected.length == 0) {
+document.getElementById("bookMsg").innerHTML = "Please select at least 1 room!";
+return;
+}
 
+if (selected.length > 1) {
+document.getElementById("bookMsg").innerHTML = "You can only book 1 room for the same timing!";
+return;
+}
+
+if (isStudentFree(currentUser.email, date, start, end, modifyBookingId) == false) {
+document.getElementById("bookMsg").innerHTML = "You already have a booking at this time!";
+return;
+}
+
+var promo = document.getElementById("studentPromo").value.toUpperCase();
   var promo = document.getElementById("studentPromo").value.toUpperCase();
   var promoUsed = false;
   var bookedRooms = [];
