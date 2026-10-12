@@ -186,7 +186,7 @@ function logout() {
 
 // ================= TEACHER STUFF =================
 
-// create a new room OR update the room being edited
+// create a new room or update the room being edited
 function saveRoom() {
   if (currentUser == null || currentUser.role != "teacher") {
     alert("Only teacher can do this!");
