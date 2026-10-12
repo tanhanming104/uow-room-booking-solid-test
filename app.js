@@ -1,5 +1,4 @@
 // UOW Room Booking System
-// room booking project
 
 // show password function
 function togglePassword() {
