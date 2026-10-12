@@ -12,7 +12,7 @@ function togglePassword() {
   }
 }
 
-// users (hardcoded for now)
+// users (hardcoded)
 var users = [
   { email: "teacher@uow", password: "1234", role: "teacher" },
   { email: "student@uow", password: "1234", role: "student" },
