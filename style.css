@@ -34,3 +34,19 @@ th {
 #teacherPage, #studentPage {
   display: none;
 }
+#version {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  margin: 0;
+  padding: 8px 0;
+  text-align: center;
+  font-size: 12px;
+  color: #666;
+  background-color: #f2f2f2;
+}
+
+body {
+  padding-bottom: 40px;
+}
