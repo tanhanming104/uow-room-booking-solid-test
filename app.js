@@ -708,8 +708,10 @@ function stopModify() {
 }
 
 function cancelBooking(id) {
-  if (currentUser == null || currentUser.role != "student") {
-    alert("Only student can do this!");
+  if (currentUser == null) {
+    alert("Please log in first!");
+    return;
+}
     return;
   }
   if (confirm("Are you sure you want to cancel this booking?") == false) {
