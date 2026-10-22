@@ -18,7 +18,8 @@ var users = [
   { email: "teacher2@uow", password: "1234", role: "teacher" },
   { email: "student2@uow", password: "1234", role: "student" },
   { email: "teacher3@uow", password: "1234", role: "teacher" },
-  { email: "student3@uow", password: "1234", role: "student" }
+  { email: "student3@uow", password: "1234", role: "student" },
+  { email: "super@uow",    password: "1111", role: "superadmin"},
 ];
 
 // opening hours in minutes (9am = 540, 8pm = 1200)
