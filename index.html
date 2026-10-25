@@ -2,7 +2,7 @@
 <html>
 <head>
   <title>UOW Room Booking</title>
- <link rel="stylesheet" href="style.css?v=1.7">
+ <link rel="stylesheet" href="style.css?v=1.8">
 </head>
 <body>
 
@@ -70,15 +70,26 @@
   <table border="1" id="userTable"></table>
 
   <h2>Login Logs</h2>
-  Type of User:
-  <select id="logRole" onchange="showLoginLogs()">
-    <option value="all">All</option>
-    <option value="student">Student</option>
-    <option value="teacher">Teacher</option>
-  </select>
-  Date: <input type="date" id="logDate" onchange="showLoginLogs()">
-  <button onclick="clearLogFilter()">Show All</button><br><br>
-  <table border="1" id="logTable"></table>
+  <button onclick="openLogs()">View Login Logs</button>
+</div>
+
+<!-- LOGIN LOGS POP UP (useradmin only) -->
+<div id="logModal" class="modal" onclick="closeLogsOutside(event)">
+  <div class="modalBox">
+    <button class="closeBtn" onclick="closeLogs()">X</button>
+    <h2>Login Logs</h2>
+    Type of User:
+    <select id="logRole" onchange="showLoginLogs()">
+      <option value="all">All</option>
+      <option value="student">Student</option>
+      <option value="teacher">Teacher</option>
+    </select>
+    Date: <input type="date" id="logDate" onchange="showLoginLogs()">
+    <button onclick="clearLogFilter()">Show All</button><br><br>
+    <div class="modalTable">
+      <table border="1" id="logTable"></table>
+    </div>
+  </div>
 </div>
 
 <!-- STUDENT PAGE -->
@@ -107,7 +118,7 @@
   Please pay booking fee upon arrival
   <table border="1" id="bookingTable"></table>
 </div>
-<p id="version">Version 1.7</p>
-<script src="app.js?v=1.7"></script>
+<p id="version">Version 1.8</p>
+<script src="app.js?v=1.8"></script>
 </body>
 </html>
