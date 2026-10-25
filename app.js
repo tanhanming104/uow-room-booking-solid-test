@@ -207,6 +207,7 @@ function logout() {
   document.getElementById("studentPage").style.display = "none";
   document.getElementById("adminPage").style.display = "none";
   document.getElementById("adminTabs").style.display = "none";
+  document.getElementById("logModal").style.display = "none";
   document.getElementById("userMsg").innerHTML = "";
   editUserIndex = -1;
   document.getElementById("loginPage").style.display = "block";
@@ -818,7 +819,6 @@ function showTab(tab) {
     document.getElementById("accountsTabBtn").className = "activeTab";
     clearUserForm();
     showUsers();
-    showLoginLogs();
   } else {
     document.getElementById("adminPage").style.display = "none";
     document.getElementById("teacherPage").style.display = "block";
@@ -1022,6 +1022,28 @@ function showLoginLogs() {
   }
 
   document.getElementById("logTable").innerHTML = html;
+}
+
+// open the login logs pop up
+function openLogs() {
+  if (currentUser == null || currentUser.role != "useradmin") {
+    alert("Only useradmin can do this!");
+    return;
+  }
+  showLoginLogs();
+  document.getElementById("logModal").style.display = "block";
+}
+
+// close the login logs pop up
+function closeLogs() {
+  document.getElementById("logModal").style.display = "none";
+}
+
+// close the pop up when click the dark area outside the box
+function closeLogsOutside(event) {
+  if (event.target.id == "logModal") {
+    closeLogs();
+  }
 }
 
 function clearLogFilter() {
