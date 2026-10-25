@@ -2,7 +2,7 @@
 <html>
 <head>
   <title>UOW Room Booking</title>
- <link rel="stylesheet" href="style.css?v=1.5">
+ <link rel="stylesheet" href="style.css?v=1.7">
 </head>
 <body>
 
@@ -23,9 +23,15 @@
 </div>
 
 
+<!-- TABS (only useradmin can see) -->
+<div id="adminTabs">
+  <button id="teacherTabBtn" onclick="showTab('teacher')">Teacher Page</button>
+  <button id="accountsTabBtn" onclick="showTab('accounts')">Accounts</button>
+</div>
+
 <!-- TEACHER PAGE -->
 <div id="teacherPage">
-  <p>Logged in as Teacher <button onclick="logout()">Logout</button></p>
+  <p><span id="teacherLabel">Logged in as Teacher</span> <button onclick="logout()">Logout</button></p>
 
   <h2>Create Room</h2>
   Room Name: <input type="text" id="roomName"><br><br>
@@ -42,6 +48,37 @@
 
   <h2>All Bookings</h2>
   <table border="1" id="allBookingsTable"></table>
+</div>
+
+<!-- USERADMIN PAGE -->
+<div id="adminPage">
+  <p>Logged in as User Admin <button onclick="logout()">Logout</button></p>
+
+  <h2>Create Account</h2>
+  Email: <input type="text" id="newEmail"><br><br>
+  Password: <input type="text" id="newPassword"><br><br>
+  Type of User:
+  <select id="newRole">
+    <option value="student">Student</option>
+    <option value="teacher">Teacher</option>
+  </select><br><br>
+  <button id="saveUserBtn" onclick="saveUser()">Create Account</button>
+  <button onclick="clearUserForm()">Clear</button>
+  <p id="userMsg"></p>
+
+  <h2>Manage Accounts</h2>
+  <table border="1" id="userTable"></table>
+
+  <h2>Login Logs</h2>
+  Type of User:
+  <select id="logRole" onchange="showLoginLogs()">
+    <option value="all">All</option>
+    <option value="student">Student</option>
+    <option value="teacher">Teacher</option>
+  </select>
+  Date: <input type="date" id="logDate" onchange="showLoginLogs()">
+  <button onclick="clearLogFilter()">Show All</button><br><br>
+  <table border="1" id="logTable"></table>
 </div>
 
 <!-- STUDENT PAGE -->
@@ -70,7 +107,7 @@
   Please pay booking fee upon arrival
   <table border="1" id="bookingTable"></table>
 </div>
-<p id="version">Version 1.5</p>
-<script src="app.js?v=1.5"></script>
+<p id="version">Version 1.7</p>
+<script src="app.js?v=1.7"></script>
 </body>
 </html>
