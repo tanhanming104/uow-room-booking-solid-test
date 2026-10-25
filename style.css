@@ -31,7 +31,7 @@ th {
 }
 
 /* hide these until login */
-#teacherPage, #studentPage {
+#teacherPage, #studentPage, #adminPage, #adminTabs {
   display: none;
 }
 #version {
@@ -49,4 +49,13 @@ th {
 
 body {
   padding-bottom: 40px;
+}
+
+#adminTabs {
+  margin-bottom: 10px;
+}
+
+.activeTab {
+  background-color: navy;
+  color: white;
 }
