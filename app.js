@@ -22,6 +22,19 @@ var users = [
   { email: "admin@uow",    password: "1111", role: "useradmin"},
 ];
 
+// load users from localstorage if got (so new accounts / edits by useradmin are kept)
+if (localStorage.getItem("uowUsers") != null) {
+  users = JSON.parse(localStorage.getItem("uowUsers"));
+}
+
+// login logs (who logged in, what type of user, date and time)
+var loginLogs = [];
+if (localStorage.getItem("uowLoginLogs") != null) {
+  loginLogs = JSON.parse(localStorage.getItem("uowLoginLogs"));
+}
+
+var editUserIndex = -1;    // -1 means useradmin is not editing an account
+
 // opening hours in minutes (9am = 540, 8pm = 1200)
 var OPEN_TIME = 540;
 var CLOSE_TIME = 1200;
@@ -51,6 +64,8 @@ saveData();
 function saveData() {
   localStorage.setItem("uowRooms", JSON.stringify(rooms));
   localStorage.setItem("uowBookings", JSON.stringify(bookings));
+  localStorage.setItem("uowUsers", JSON.stringify(users));
+  localStorage.setItem("uowLoginLogs", JSON.stringify(loginLogs));
 }
 
 // find a room using its id
@@ -157,8 +172,17 @@ function login() {
   document.getElementById("password").value = "";
   document.getElementById("loginPage").style.display = "none";
 
-  // teacher and student see different pages
-  if (currentUser.role == "teacher") {
+  // save a login log (date and time and type of user)
+  addLoginLog(currentUser);
+
+  // teacher, student and useradmin see different pages
+  if (currentUser.role == "useradmin") {
+    // useradmin sees the teacher page + an Accounts tab
+    document.getElementById("adminTabs").style.display = "block";
+    document.getElementById("teacherLabel").innerHTML = "Logged in as User Admin";
+    showTab("teacher");
+  } else if (currentUser.role == "teacher") {
+    document.getElementById("teacherLabel").innerHTML = "Logged in as Teacher";
     document.getElementById("teacherPage").style.display = "block";
     showRooms();
     showAllBookings();
@@ -181,15 +205,60 @@ function logout() {
   document.getElementById("bookMsg").innerHTML = "";
   document.getElementById("teacherPage").style.display = "none";
   document.getElementById("studentPage").style.display = "none";
+  document.getElementById("adminPage").style.display = "none";
+  document.getElementById("adminTabs").style.display = "none";
+  document.getElementById("userMsg").innerHTML = "";
+  editUserIndex = -1;
   document.getElementById("loginPage").style.display = "block";
 }
+
+// record every successful login
+function addLoginLog(user) {
+  var d = new Date();
+  var h = d.getHours();
+  var m = d.getMinutes();
+  var sec = d.getSeconds();
+  if (m < 10) {
+    m = "0" + m;
+  }
+  if (sec < 10) {
+    sec = "0" + sec;
+  }
+  var ampm = "AM";
+  if (h >= 12) {
+    ampm = "PM";
+  }
+  if (h > 12) {
+    h = h - 12;
+  }
+  if (h == 0) {
+    h = 12;
+  }
+
+  loginLogs.push({
+    email: user.email,
+    role: user.role,
+    date: todayString(),
+    time: h + ":" + m + ":" + sec + " " + ampm
+  });
+  saveData();
+}
+
 
 
 // ================= TEACHER STUFF =================
 
+// teacher and useradmin can both use the teacher page
+function canDoTeacherStuff() {
+  if (currentUser == null) {
+    return false;
+  }
+  return currentUser.role == "teacher" || currentUser.role == "useradmin";
+}
+
 // create a new room or update the room being edited
 function saveRoom() {
-  if (currentUser == null || currentUser.role != "teacher") {
+  if (canDoTeacherStuff() == false) {
     alert("Only teacher can do this!");
     return;
   }
@@ -326,7 +395,7 @@ document.getElementById("allBookingsTable").innerHTML = html;
 }
 // teacher cancel any student's booking
 function teacherCancelBooking(id) {
-if (currentUser == null || currentUser.role != "teacher") {
+if (canDoTeacherStuff() == false) {
 alert("Only teacher can do this!");
 return;
 }
@@ -355,7 +424,7 @@ document.getElementById("roomMsg").innerHTML = "Booking cancelled!";
 }
 // launch = students can see the room now
 function launchRoom(i) {
-  if (currentUser == null || currentUser.role != "teacher") {
+  if (canDoTeacherStuff() == false) {
     alert("Only teacher can do this!");
     return;
   }
@@ -367,7 +436,7 @@ function launchRoom(i) {
 
 // put the room details back into the form so teacher can change it
 function editRoom(i) {
-  if (currentUser == null || currentUser.role != "teacher") {
+  if (canDoTeacherStuff() == false) {
     alert("Only teacher can do this!");
     return;
   }
@@ -386,7 +455,7 @@ function editRoom(i) {
 }
 
 function deleteRoom(i) {
-  if (currentUser == null || currentUser.role != "teacher") {
+  if (canDoTeacherStuff() == false) {
     alert("Only teacher can do this!");
     return;
   }
@@ -732,4 +801,231 @@ function cancelBooking(id) {
   showAvailableRooms();
   showMyBookings();
   document.getElementById("bookMsg").innerHTML = "Booking cancelled!";
+}
+
+
+// ================= USERADMIN STUFF =================
+
+// switch between the Teacher Page tab and the Accounts tab (useradmin only)
+function showTab(tab) {
+  if (currentUser == null || currentUser.role != "useradmin") {
+    return;
+  }
+  if (tab == "accounts") {
+    document.getElementById("teacherPage").style.display = "none";
+    document.getElementById("adminPage").style.display = "block";
+    document.getElementById("teacherTabBtn").className = "";
+    document.getElementById("accountsTabBtn").className = "activeTab";
+    clearUserForm();
+    showUsers();
+    showLoginLogs();
+  } else {
+    document.getElementById("adminPage").style.display = "none";
+    document.getElementById("teacherPage").style.display = "block";
+    document.getElementById("teacherTabBtn").className = "activeTab";
+    document.getElementById("accountsTabBtn").className = "";
+    showRooms();
+    showAllBookings();
+  }
+}
+
+// find a user index using email
+function findUserIndex(email) {
+  for (var i = 0; i < users.length; i++) {
+    if (users[i].email == email) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+// create a new account, or update the email / password of the account being edited
+function saveUser() {
+  if (currentUser == null || currentUser.role != "useradmin") {
+    alert("Only useradmin can do this!");
+    return;
+  }
+
+  var email = document.getElementById("newEmail").value.trim().toLowerCase();
+  var password = document.getElementById("newPassword").value;
+  var role = document.getElementById("newRole").value;
+
+  if (email == "" || password == "") {
+    document.getElementById("userMsg").innerHTML = "Please fill in email and password!";
+    return;
+  }
+  if (email.indexOf("@") == -1) {
+    document.getElementById("userMsg").innerHTML = "Please enter a valid email!";
+    return;
+  }
+  if (password.length < 4) {
+    document.getElementById("userMsg").innerHTML = "Password must be at least 4 characters!";
+    return;
+  }
+
+  // email cannot be used by another account
+  var sameEmail = findUserIndex(email);
+  if (sameEmail != -1 && sameEmail != editUserIndex) {
+    document.getElementById("userMsg").innerHTML = "This email is already used by another account!";
+    return;
+  }
+
+  var message = "";
+
+  if (editUserIndex == -1) {
+    // new account
+    users.push({ email: email, password: password, role: role });
+    message = "Account created for " + email + " (" + role + ")!";
+  } else {
+    // update old account (only email and password can change)
+    var oldEmail = users[editUserIndex].email;
+    users[editUserIndex].email = email;
+    users[editUserIndex].password = password;
+
+    // if email changed, update the student's bookings so they still see them
+    if (oldEmail != email) {
+      for (var b = 0; b < bookings.length; b++) {
+        if (bookings[b].student == oldEmail) {
+          bookings[b].student = email;
+        }
+      }
+    }
+    message = "Account updated for " + email + "!";
+  }
+
+  saveData();
+  clearUserForm();
+  showUsers();
+  document.getElementById("userMsg").innerHTML = message;
+}
+
+// put the account details back into the form so useradmin can change it
+function editUser(i) {
+  if (currentUser == null || currentUser.role != "useradmin") {
+    alert("Only useradmin can do this!");
+    return;
+  }
+  document.getElementById("newEmail").value = users[i].email;
+  document.getElementById("newPassword").value = users[i].password;
+  document.getElementById("newRole").value = users[i].role;
+  document.getElementById("newRole").disabled = true;  // role cannot change when editing
+  editUserIndex = i;
+  document.getElementById("saveUserBtn").innerHTML = "Update Account";
+  document.getElementById("userMsg").innerHTML = "Editing " + users[i].email;
+}
+
+function clearUserForm() {
+  document.getElementById("newEmail").value = "";
+  document.getElementById("newPassword").value = "";
+  document.getElementById("newRole").value = "student";
+  document.getElementById("newRole").disabled = false;
+  document.getElementById("userMsg").innerHTML = "";
+  editUserIndex = -1;
+  document.getElementById("saveUserBtn").innerHTML = "Create Account";
+}
+
+// delete an account (and the bookings of that account)
+function deleteUser(i) {
+  if (currentUser == null || currentUser.role != "useradmin") {
+    alert("Only useradmin can do this!");
+    return;
+  }
+  if (users[i].role == "useradmin") {
+    alert("Cannot delete a useradmin account!");
+    return;
+  }
+
+  var email = users[i].email;
+
+  // count the bookings of this account
+  var bookingCount = 0;
+  for (var b = 0; b < bookings.length; b++) {
+    if (bookings[b].student == email) {
+      bookingCount++;
+    }
+  }
+
+  var msg = "Are you sure you want to delete " + email + "?";
+  if (bookingCount > 0) {
+    msg = email + " has " + bookingCount + " booking(s). Delete the account and the bookings?";
+  }
+  if (confirm(msg) == false) {
+    return;
+  }
+
+  // remove the bookings of this account
+  for (var b = bookings.length - 1; b >= 0; b--) {
+    if (bookings[b].student == email) {
+      bookings.splice(b, 1);
+    }
+  }
+
+  users.splice(i, 1);
+  saveData();
+  clearUserForm();
+  showUsers();
+  document.getElementById("userMsg").innerHTML = "Account " + email + " deleted!";
+}
+
+// show all student and teacher accounts
+function showUsers() {
+  var html = "<tr><th>Email</th><th>Password</th><th>Type of User</th><th>Action</th></tr>";
+  var count = 0;
+
+  for (var i = 0; i < users.length; i++) {
+    if (users[i].role == "useradmin") {
+      continue;
+    }
+    html = html + "<tr>";
+    html = html + "<td>" + users[i].email + "</td>";
+    html = html + "<td>" + users[i].password + "</td>";
+    html = html + "<td>" + users[i].role + "</td>";
+    html = html + "<td><button onclick='editUser(" + i + ")'>Edit</button> ";
+    html = html + "<button onclick='deleteUser(" + i + ")'>Delete</button></td>";
+    html = html + "</tr>";
+    count++;
+  }
+
+  if (count == 0) {
+    html = html + "<tr><td colspan='4'>No accounts yet</td></tr>";
+  }
+
+  document.getElementById("userTable").innerHTML = html;
+}
+
+// show login logs (newest first), can filter by type of user and date
+function showLoginLogs() {
+  var roleFilter = document.getElementById("logRole").value;
+  var dateFilter = document.getElementById("logDate").value;
+
+  var html = "<tr><th>Date</th><th>Time</th><th>Email</th><th>Type of User</th></tr>";
+  var count = 0;
+
+  for (var i = loginLogs.length - 1; i >= 0; i--) {
+    if (roleFilter != "all" && loginLogs[i].role != roleFilter) {
+      continue;
+    }
+    if (dateFilter != "" && loginLogs[i].date != dateFilter) {
+      continue;
+    }
+    html = html + "<tr>";
+    html = html + "<td>" + loginLogs[i].date + "</td>";
+    html = html + "<td>" + loginLogs[i].time + "</td>";
+    html = html + "<td>" + loginLogs[i].email + "</td>";
+    html = html + "<td>" + loginLogs[i].role + "</td>";
+    html = html + "</tr>";
+    count++;
+  }
+
+  if (count == 0) {
+    html = html + "<tr><td colspan='4'>No login logs</td></tr>";
+  }
+
+  document.getElementById("logTable").innerHTML = html;
+}
+
+function clearLogFilter() {
+  document.getElementById("logRole").value = "all";
+  document.getElementById("logDate").value = "";
+  showLoginLogs();
 }
